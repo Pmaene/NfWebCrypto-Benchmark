@@ -1,0 +1,126 @@
+<script src="nfcrypto.js"></script>
+<script src="jsbn.js"></script>
+<script src="leemon.js"></script>
+
+<script>
+    var base64 = {
+        parse: function (s) {
+            s = s.replace(/-/g, "+").replace(/_/g, "/").replace(/\s/g, '');
+            return new Uint8Array(Array.prototype.map.call(atob(s), function (c) { return c.charCodeAt(0) }));
+        }
+    };
+</script>
+
+<script>
+    function showResults(times)
+    {
+        var sum = times.reduce(function(a, b) { return a + b });
+        var average = sum/times.length;
+        var variance = times.reduce(function(a, b) { return a + Math.pow((b - average), 2) });
+        variance = variance/times.length;
+
+        console.log("Time: " + average);
+        console.log("Variance: " + variance);
+        console.log("========================================");
+    }
+</script>
+
+<script>
+    ITERATIONS = 1000;
+
+    var times = new Array();
+
+    console.log("JSBN");
+
+    var p = new BigInteger("75407963261568994278041440883837641164253926102839094004427536130156645596467083381194909342887779407209352610749590793925652802605616489533703999258294833501081616720916088792432812325260446576556726818942678153915302531156500077060492401750860341582680289689725014174236512982255690593834474632630780104120");
+    var g = new BigInteger("32930447100895939166772784967169434002052467844408906042119504232579513711104957662876257095958766241090382447908223831164795577641869981684464902783078826455356778968210891392818458971450709824814035645444823378837314920602111471545768229853358724033927741312912534046936012803501455605660663090686132791845");
+    var a = new BigInteger("121097250573554414186554532729887678604290003151592636400055017950851657500065112854651211390349216671348778778086092674673240382331809005170199263261143903149459119655519748532219957837908725971838697432072854628140893815141193765721623977192276557381535685831918381235595257587553234493729086432212853653233");
+
+    for (var i = 0; i < ITERATIONS; i++) {
+        var start = new Date().getTime();
+        g.modPow(a, p);
+        var end = new Date().getTime();
+        var time = end - start;
+        times[i] = time;
+    }
+
+    showResults(times);
+
+    console.log("Leemon");
+
+    var p = str2bigInt("6b626edda176503d9225cafd1496ea1aeeb665c5236c640c62d4b6e5780cddf3cf262097f120f522ed773933da1687eec705a8e858c3f1b4d0205e30d538e560fb5bf2550518f5a62eb90bea7d920bddc262521bf3278a2bc55fd6de071193469f9e6f0d192c5fa49d89d1057b76821abce1705a13d7d7d69e91c7f57add0db8", 16, 1);
+    var g = str2bigInt("2ee4fed270a1494de8f5cbbf152be6700bcbdc0e1bb881a4c08e460d3a0ac3c174689e66bf5e22636971ebcfe1d1d805b60d3f666481ca7a07cdf12917040f9d2d531208bcb4bdd771abd0d5c6727cab8cce82c773df25dfaa2f34e863a05e75e8762b64b6fe8c71a66388ac8894e3a3853d6fe90e6151cbcba8ea8bddc0aa25", 16, 1);
+    var a = str2bigInt("ac72bdd37bb985ade4d02741380060f9bd55c252f083a435f7bc16139b1d3044768a0b9e50995bf8f9f00c253ad66e3cec747eb3ab5db0290f9e7555a5779e1a1b6f302244eb0b630ea230d56edbca49341772e68414d3e6de074041e9a41556b6ec845ec9c2bcca9a7244ab5209853950bc73a3decb20bda3e76cea382efef1", 16, 1);
+
+    for (var i = 0; i < ITERATIONS; i++) {
+        var start = new Date().getTime();
+        powMod(g, a, p);
+        var end = new Date().getTime();
+        var time = end - start;
+        times[i] = time;
+    }
+
+    showResults(times);
+
+    console.log("NfWebCrypto");
+
+    var p = base64.parse("uA3devXHkZ7W19cTWnDhvBqCdnsF0YmdpF8sGQ1vnp9GkxEH3tZfxSuKJ/MbUmLC3QuSfeoLuS6m9RgFVfJb+2DlONUwXiDQtPHDWOioBcfuhxbaMzl37SL1IPGXICbP890MeOW21GIMZGwjxWW27hrqlhT9yiWSPVB2od1uYms=");
+    var g = base64.parse("JarA3YvqqMvLUWEO6W89haPjlIisiGOmcYz+tmQrduh1XqBj6DQvqt8l33PHgs6Mq3xyxtXQq3HXvbS8CBJTLZ0PBBcp8c0HesqBZGY/DbYF2NHhz+txaWMiXr9mnmh0wcMKOg1GjsCkgbgbDtzLC3DmKxW/y/XoTUmhcNL+5C4=");
+    var a = base64.parse("8f4uOOps56O9IMveo3O8UDmFCVKrRHKayrzCyV6E7LZWFaTpQUAH3ubTFITmchc0ScrbbtUwog5jC+tEIjBvGxqed6VVdZ4PKbBdq7N+dOw8btY6JQzw+fhbmVCeC4p2RDAdmxMWvPc1pIPwUsJVvflgADhBJ9DkrYW5e9O9cqw=");
+
+    var modExp;
+
+    var cryptoSubtle = window.nfCrypto.subtle;
+
+    for (var i = 0; i < ITERATIONS; i++) {
+        var start = new Date().getTime();
+        var op = cryptoSubtle.importKey(
+            "raw",
+            a,
+            {
+                name: "DH",
+                params: {
+                    prime: p,
+                    generator: g,
+                }
+            },
+            true,
+            ["derive"]
+        );
+        op.onerror = function (e) {
+            console.log("Error");
+        };
+        op.oncomplete = function (e) {
+            key = e.target.result;
+
+            var op = cryptoSubtle.deriveKey(
+                {
+                    name: "DH",
+                    params: { "public": g }
+                },
+                key,
+                { name:  "AES-CBC" },
+                true,
+                ["encrypt", "decrypt"]);
+            op.onerror = function (e) {
+                console.log("Error");
+            };
+            op.oncomplete = function (e) {
+                modExp = e.target.result;
+
+                var op = cryptoSubtle.exportKey("raw", modExp);
+                op.onerror = function (e) {
+                    console.log("Error");
+                };
+                op.oncomplete = function (e) {
+                    modExpData = e.target.result;
+                };
+            };
+        };
+        var end = new Date().getTime();
+        var time = end - start;
+        times[i] = time;
+    }
+
+    showResults(times);
+</script>
