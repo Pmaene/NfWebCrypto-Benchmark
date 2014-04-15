@@ -1,0 +1,149 @@
+<script src='jquery.min.js'></script>
+<script src='chart.min.js'></script>
+
+<script src="nfcrypto.js"></script>
+<script src="jsbn.js"></script>
+<script src="prng4.js"></script>
+<script src="rng.js"></script>
+<script src="rsa.js"></script>
+
+<script>
+    var base64 = {
+        parse: function (s) {
+            s = s.replace(/-/g, "+").replace(/_/g, "/").replace(/\s/g, '');
+            return new Uint8Array(Array.prototype.map.call(atob(s), function (c) { return c.charCodeAt(0) }));
+        }
+    };
+
+    function text2ua(s) {
+        var ua = new Uint8Array(s.length);
+        for (var i = 0; i < s.length; i++) {
+            ua[i] = s.charCodeAt(i);
+        }
+        return ua;
+    }
+</script>
+
+<div>
+    <h1>JSBN</h1>
+    <canvas id="jsbnGraph" width="1200" height="400"></canvas>
+
+    <h1>nfWebCrypto</h1>
+    <canvas id="nfWebCryptoGraph" width="1200" height="400"></canvas>
+</div>
+
+<script>
+    function showResults(times, graph)
+    {
+        var sum = times.reduce(function(a, b) { return a + b });
+        var average = sum/times.length;
+        var variance = times.reduce(function(a, b) { return a + Math.pow((b - average), 2) });
+        variance = variance/times.length;
+
+        var data = {
+            labels : [],
+            datasets : [
+                {
+                    fillColor : "rgba(98, 207, 252, 0.25)",
+                    strokeColor : "rgba(98, 207, 252, 1)",
+                    pointColor : "rgba(98, 207, 252, 1)",
+                    pointStrokeColor : "#fff",
+                    data : []
+                }
+            ]
+        };
+
+        var dataArray = new Array();
+        $(times).each(function(key, value) {
+        if (typeof dataArray[value] == "undefined")
+                dataArray[value] = 0;
+
+            dataArray[value]++;
+        });
+
+        $(dataArray).each(function(key, value) {
+            data.labels.push(key);
+            data.datasets[0].data.push(value);
+        });
+
+        new Chart($("#" + graph).get(0).getContext("2d")).Bar(data);
+
+        console.log("Time: " + average);
+        console.log("Variance: " + variance);
+        console.log("========================================");
+    }
+</script>
+
+<script>
+    ITERATIONS = 1000;
+
+    PLAINTEXT = "This is some data to encrypt";
+
+    var start;
+    var end;
+    var times;
+
+    console.log("JSBN");
+
+    var n = "a5261939975948bb7a58dffe5ff54e65f0498f9175f5a09288810b8975871e99af3b5dd94057b0fc07535f5f97444504fa35169d461d0d30cf0192e307727c065168c788771c561a9400fb49175e9e6aa4e23fe11af69e9412dd23b0cb6684c4c2429bce139e848ab26d0829073351f4acd36074eafd036a5eb83359d2a698d3";
+    var e = "10001";
+
+    var rsa = new RSAKey();
+    rsa.setPublic(n, e);
+
+    times = new Array();
+    for (var i = 0; i < ITERATIONS; i++) {
+        start = new Date().getTime();
+        rsa.encrypt(PLAINTEXT);
+        end = new Date().getTime();
+        times[i] = end - start;
+    }
+
+    showResults(times, 'jsbnGraph');
+
+    console.log("NfWebCrypto");
+
+    var pubKey = "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDlpLodcgbvb3j0inHPnHUQahPgeJhcUG107kn5RYO2QnmEx1GjdrWygdrFS00BzCeFATeRlPEbEvI4vTZ1EuLDWBqe+wbqPmr+PMzbV0mgcS+nmWe7Q5DTlh1HHrRuam1NHw6bfUiOAUddM0V02hICD1O3NZvfwy5DcxqP+GnK+IsQ7f3YV9N1u2pRT0OxaUVLOE23O8Wswb8PNVs3NOgJOORfoMtKXqZCITGk/YXY7pM9e9NyLFAEPSHV6xcct5I0eEV8EZsqYh0PKV4Vw8ntUMyp5HXHqSt8SmgC03aAidmu+g5ElHcmeYYD0b8ByzexRg+kZlxeJHpsV6E/hPUVAgMBAAECggEAQuNtNoBtFrbAY3Ij3lXzHxnWuk5GCrV+fE2gDFQ8Hg1UueEYnWVJXTpHj6n0Py7I4AvPtL7OT5WAKhiq0QT0OfPipSX3CKmvnmf1P3o4PtxZBhc/yKLQf2C9HGcMJREozwrZxV6DkKE8uR/i/js6fZEbUET0JwQB6LGRLhgsMGsRPF10f60G6RkqAb2d2zSrZYUxVIuIN9+853SAzTIhkgaPd4aOK1E0d+j+gwJlZPaiQB3vWdUOhARPip8pwCpri8dynuHVNvdb0OXlUHt7GYh7gGY3QO0sYqjgeCvD7bsXCSPx2pcnDTeHbN2hw5c2a9sCvKx4GM2y4kLQ6Z1IYQKBgQD6bu8AE/JHvtVyPZBl1QlRo25EQhFKpWNoWhHB+hPU/Y76K+waKZylTvwXYRqnZ219QNmDnSURsnw0qjKRHOfW+NAgirVmkUjSHGpxSyNqFMpkUBlO7ZNfx9QUkUuDNDYZjUn/AsNG32yiy06iZuUF5jyiB+BUcJWrNghF5NbpbQKBgQDqv32eVW2ZCwztG7rnBdj6DMPetRV+6ZjTktQfUxxKM8z6R8uFc1LRLcHzTntmEAigasnTz8QJc+Zm/vkC4+ax1FAR3j5db9Ns0hSvQeRcE8DFb+lwKsymEBhasrfW2NiPuouHSmL4MDeekLOEOlPvebiQ7Sx57hjWlrKpd3vZSQKBgCtRVPXmfVn7oGAKVhfHKb19T21vIB6RTQiXy8qJvzRwR3LudgBwgi/14ZUJrtqWAVJRDU6+t9K/1MwnRGflYBTHJPj8BTSgnL/7Ok4ueQm4XunLERWd8of2wLBuEWm4dkMlNU9u4ug3bUsbb5aXxbWnhYVhZ2QztS/QQM4WLzZhAoGBAMxHvYI2pzxCUIpZ0kjOXuYii6TXgpBBqdub73oe8gRklaDLL4G/PLeJkTkw99N2antm0qG/MMJlGIBSq9FnD896if8ynqTi9mLBYnys45N5IQzveX5B0HtGkFsFIVQWukZBOMCP7BY8p3oWRBHyTC6ehw2fR1AH8Zdz5p/wuVb5AoGABjXz94m6zmUsqVD7CX0z9Jkpw4dCwWB+XLuR1HAVm/oFDyieXjOfgjPY0ja0Y5ZBrQ0MAGj5Cd+6AsYornz0DpPpExrYmkhw5xek3exN5LDA+LQP7n1XAtxBUIvBFDeatP0X383P3iN0Ojxb2+qWxB1J8pG2bZN98Rv27xqnU90=";
+
+    var cryptoSubtle = window.nfCrypto.subtle;
+
+    function startEncryption(i, times) {
+        var op = cryptoSubtle.generateKey({
+            name: "RSAES-PKCS1-v1_5",
+            params: {
+                modulusLength: 1024,
+                publicExponent: new Uint8Array([0x01, 0x00, 0x01])
+            }
+        }, false);
+        op.onerror = function (e) {
+            console.log("Error");
+        };
+        op.oncomplete = function (e) {
+            start = new Date().getTime();
+
+            var op = cryptoSubtle.encrypt(
+                { name: "RSAES-PKCS1-v1_5" },
+                e.target.result.publicKey,
+                text2ua(PLAINTEXT)
+            );
+            op.onerror = function (e) {
+                console.log("Error");
+            };
+            op.oncomplete = function (e) {
+                end = new Date().getTime();
+                times[i] = end - start;
+
+                if (i < (ITERATIONS - 1)) {
+                    i++;
+                    startEncryption(i, times);
+                }
+
+                if (i == (ITERATIONS - 1))
+                    showResults(times, "nfWebCryptoGraph");
+            };
+        };
+    }
+
+    times = new Array();
+    startEncryption(0, times);
+</script>
