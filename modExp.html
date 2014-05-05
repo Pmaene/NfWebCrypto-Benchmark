@@ -17,16 +17,19 @@
 <div>
     <h1>JSBN</h1>
     <canvas id="jsbnGraph" width="1200" height="400"></canvas>
+    <pre id="jsbnCsv"></pre>
 
     <h1>Leemon</h1>
     <canvas id="leemonGraph" width="1200" height="400"></canvas>
+    <pre id="leemonCsv"></pre>
 
     <h1>nfWebCrypto</h1>
     <canvas id="nfWebCryptoGraph" width="1200" height="400"></canvas>
+    <pre id="nfWebCryptoCsv"></pre>
 </div>
 
 <script>
-    function showResults(times, graph)
+    function showResults(times, graph, csv)
     {
         var sum = times.reduce(function(a, b) { return a + b });
         var average = sum/times.length;
@@ -48,7 +51,7 @@
 
         var dataArray = new Array();
         $(times).each(function(key, value) {
-        if (typeof dataArray[value] == "undefined")
+            if (typeof dataArray[value] == "undefined")
                 dataArray[value] = 0;
 
             dataArray[value]++;
@@ -61,6 +64,10 @@
 
         new Chart($("#" + graph).get(0).getContext("2d")).Bar(data);
 
+        $(times).each(function(key, value) {
+            $("#" + csv).append(key + ',' + value + '\n');
+        });
+
         console.log("Time: " + average);
         console.log("Variance: " + variance);
         console.log("========================================");
@@ -68,7 +75,7 @@
 </script>
 
 <script>
-    ITERATIONS = 250;
+    ITERATIONS = 1000;
 
     var start;
     var end;
@@ -88,7 +95,7 @@
         times[i] = end - start;
     }
 
-    showResults(times, "jsbnGraph");
+    showResults(times, "jsbnGraph", "jsbnCsv");
 
     console.log("Leemon");
 
@@ -104,7 +111,7 @@
         times[i] = end - start;
     }
 
-    showResults(times, "leemonGraph");
+    showResults(times, "leemonGraph", "leemonCsv");
 
     console.log("NfWebCrypto");
 
@@ -158,13 +165,13 @@
                     end = new Date().getTime();
                     times[i] = end - start;
 
-                    if (i < (ITERATIONS - 1)) {
-                        i++;
-                        startExponentiation(i, times);
-                    }
+                    i++;
 
-                    if (i == (ITERATIONS - 1))
-                        showResults(times, "nfWebCryptoGraph");
+                    if (i < ITERATIONS)
+                        startExponentiation(i, times);
+
+                    if (i == ITERATIONS)
+                        showResults(times, "nfWebCryptoGraph", "nfWebCryptoCsv");
                 };
             };
         };
